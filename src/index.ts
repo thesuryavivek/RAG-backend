@@ -79,6 +79,36 @@ app.post("/ingest", async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data });
 });
 
+app.post("/query", async (req: Request, res: Response) => {
+  const question = req.body.question;
+
+  console.log("question is", question);
+
+  const questionEmbedding = await embed(question);
+
+  const collection = await chromaClient.getCollection({
+    name: "rag_collection",
+  });
+
+  const results = await collection.query({
+    queryEmbeddings: questionEmbedding,
+    nResults: 5,
+    include: ["documents", "metadatas"],
+  });
+  
+  const context = results.documents.map((doc, index) => `SOURCE ${index + 1} \n ${doc} \n`).join('\n')
+  
+  const completions = await openai.responses.create({
+    model: 'gpt-5-nano',
+    input: [
+      {
+        role: 'developer'
+      }
+    ]
+  })
+
+});
+
 app.listen(PORT, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${PORT}`);
 });
