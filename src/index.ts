@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express, { type Request, type Response } from "express";
 import * as z from "zod";
 import { chromaClient } from "./services/chromaClient.js";
+import { openai } from "./services/openaiClient.js";
 import { chunkByTokens, cleanData, embed } from "./utils.js";
 
 dotenv.config();
@@ -95,18 +96,36 @@ app.post("/query", async (req: Request, res: Response) => {
     nResults: 5,
     include: ["documents", "metadatas"],
   });
-  
-  const context = results.documents.map((doc, index) => `SOURCE ${index + 1} \n ${doc} \n`).join('\n')
-  
-  const completions = await openai.responses.create({
-    model: 'gpt-5-nano',
+
+  const context = results.documents
+    .map((doc, index) => `SOURCE ${index + 1} \n ${doc} \n`)
+    .join("\n");
+
+  const response = await openai.responses.create({
+    model: "gpt-5-nano",
     input: [
       {
-        role: 'developer'
-      }
-    ]
-  })
+        role: "developer",
+        content: [
+          {
+            type: "input_text",
+            text: "You are a RAG assistant. Answer ONLY using the provided sources. If the answer is not present, just say you don't know.",
+          },
+        ],
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `Question: ${question} \n\n Sources: \n ${context}`,
+          },
+        ],
+      },
+    ],
+  });
 
+  res.status(200).json(response.output_text);
 });
 
 app.listen(PORT, () => {
