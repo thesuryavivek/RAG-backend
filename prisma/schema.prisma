@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Source {
+  id        String   @id @default(cuid())
+  type      String
+  title     String?
+  rawText   String
+  sourceUrl String?
+  status    String   @default("enqueued")
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String?
+  createdAt DateTime @default(now())
+}
