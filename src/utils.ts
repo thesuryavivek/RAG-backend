@@ -2,13 +2,15 @@ import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import { encoding_for_model } from "tiktoken";
 import type { DataSource } from "./index.js";
+import { openai } from "./services/openaiClient.js";
 
 const cleanPlainText = (text: string) => {
   return text
     .replace(/\u00A0/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .trim()
+    .normalize("NFKC");
 };
 
 const extractTextFromHTML = (html: string, url: string) => {
@@ -29,6 +31,7 @@ export const chunkByTokens = (
   text: string,
   { chunkSize = 500, overlap = 80 } = {},
 ) => {
+  const textDecoder = new TextDecoder();
   const enc = encoding_for_model("gpt-5");
 
   const tokens = enc.encode(text);
@@ -40,7 +43,7 @@ export const chunkByTokens = (
     const end = Math.min(start + chunkSize, tokens.length);
 
     const chunkTokens = tokens.slice(start, end);
-    const chunkText = enc.decode(chunkTokens);
+    const chunkText = textDecoder.decode(enc.decode(chunkTokens));
 
     chunks.push(chunkText);
 
