@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import express, { type Request, type Response } from "express";
 import * as z from "zod";
-import { cleanPlainText, extractTextFromHTML } from "./utils.js";
+import { cleanData } from "./utils.js";
 
 dotenv.config();
 
@@ -21,7 +21,7 @@ const DataSourceSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-type DataSource = z.infer<typeof DataSourceSchema>;
+export type DataSource = z.infer<typeof DataSourceSchema>;
 const dataSources: DataSource[] = [];
 
 app.get("/", (req: Request, res: Response) => {
@@ -44,18 +44,8 @@ app.post("/ingest", async (req: Request, res: Response) => {
 
   const data = result.data;
 
-  if (data.type === "note") {
-    const cleanedData = cleanPlainText(data.text);
-    console.log(cleanedData);
-  }
-
-  if (data.type === "url") {
-    const res = await fetch(data.url);
-    const html = await res.text();
-
-    const cleanedData = extractTextFromHTML(html, data.url);
-    console.log(cleanedData);
-  }
+  const cleanedData = await cleanData(data);
+  console.log(cleanedData);
 
   dataSources.push(data);
   res.status(201).json({ success: true, data });

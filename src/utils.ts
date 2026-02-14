@@ -1,8 +1,9 @@
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import { encoding_for_model } from "tiktoken";
+import type { DataSource } from "./index.js";
 
-export const cleanPlainText = (text: string) => {
+const cleanPlainText = (text: string) => {
   return text
     .replace(/\u00A0/g, " ")
     .replace(/[ \t]+/g, " ")
@@ -10,20 +11,18 @@ export const cleanPlainText = (text: string) => {
     .trim();
 };
 
-export const extractTextFromHTML = (html: string, url: string) => {
+const extractTextFromHTML = (html: string, url: string) => {
   const dom = new JSDOM(html, { url });
 
   const reader = new Readability(dom.window.document);
   const article = reader.parse();
 
-  console.log(article);
-
   if (!article?.textContent) {
     console.log("No text content found");
-    return;
+    return null;
   }
 
-  return cleanPlainText(article.textContent);
+  return article.textContent;
 };
 
 export const chunkByTokens = (
@@ -50,4 +49,22 @@ export const chunkByTokens = (
 
   enc.free();
   return chunks;
+};
+
+export const cleanData = async (data: DataSource) => {
+  if (data.type === "note") {
+    return cleanPlainText(data.text);
+  }
+
+  if (data.type === "url") {
+    const res = await fetch(data.url);
+    const html = await res.text();
+    const text = extractTextFromHTML(html, data.url);
+
+    if (!text) {
+      return "No content found";
+    }
+
+    return cleanPlainText(text);
+  }
 };
