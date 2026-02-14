@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import express, { type Request, type Response } from "express";
 import * as z from "zod";
-import { cleanData } from "./utils.js";
+import { chromaClient } from "./services/chromaClient.js";
+import { chunkByTokens, cleanData, embed } from "./utils.js";
 
 dotenv.config();
 
@@ -45,7 +46,34 @@ app.post("/ingest", async (req: Request, res: Response) => {
   const data = result.data;
 
   const cleanedData = await cleanData(data);
-  console.log(cleanedData);
+
+  if (!cleanedData) {
+    res.status(400).json({ error: "url is not good" });
+    return;
+  }
+
+  const chunks = chunkByTokens(cleanedData);
+  console.log("chunks created", Date.now());
+
+  const embeddings = await embed(chunks);
+  console.log("embeddings created", Date.now());
+
+  const collection = await chromaClient.getOrCreateCollection({
+    name: "rag_collection",
+  });
+  console.log("collection created", Date.now());
+
+  await collection.add({
+    ids: chunks.map((c, i) => `${Date.now()}_chunk_${i}`),
+    documents: chunks,
+    embeddings,
+    metadatas: chunks.map(() => ({
+      timestamp: new Date().toISOString(),
+      source_type: data.type,
+    })),
+  });
+
+  console.log("chunks added", Date.now());
 
   dataSources.push(data);
   res.status(201).json({ success: true, data });

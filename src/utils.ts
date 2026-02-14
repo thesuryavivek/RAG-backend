@@ -71,3 +71,13 @@ export const cleanData = async (data: DataSource) => {
     return cleanPlainText(text);
   }
 };
+
+export const embed = async (data: string[]) => {
+  const res = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: data,
+  });
+
+  const embeddings = res.data.map((i) => i.embedding);
+  return embeddings;
+};
