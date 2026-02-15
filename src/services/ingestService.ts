@@ -34,7 +34,8 @@ export const ingestSource = async (data: ingestDatatype) => {
       ids: chunks.map((c) => uuid()),
       documents: chunks,
       embeddings,
-      metadatas: chunks.map(() => ({
+      metadatas: chunks.map((c, i) => ({
+        chunk_index: i,
         timestamp: new Date().toISOString(),
         source_type: source.type,
         source_id: source.id,

@@ -8,11 +8,12 @@ export const messagesService = async () => {
       },
       include: {
         citations: {
-          distinct: ['sourceId'],
           orderBy: {
             createdAt: 'asc',
           },
           select: {
+            snippet: true,
+            citationIndex: true,
             source: {
               select: {
                 title: true,

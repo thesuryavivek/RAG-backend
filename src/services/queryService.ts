@@ -23,9 +23,14 @@ export const query = async (question: string) => {
       include: ['documents', 'metadatas'],
     });
 
-    const context = results.documents
-      .map((doc, index) => `SOURCE ${index + 1} \n ${doc} \n`)
-      .join('\n');
+    const metas = results.metadatas[0];
+
+    const context = results.documents[0]
+      ?.map((doc, index) => {
+        const meta = metas?.[index];
+        return `SOURCE ${index + 1}: ${meta?.url || meta?.title} \n ${doc} \n`;
+      })
+      .join('\n\n');
 
     const response = await openai.responses.create({
       model: 'gpt-5-nano',
@@ -35,7 +40,9 @@ export const query = async (question: string) => {
           content: [
             {
               type: 'input_text',
-              text: "You are a RAG assistant. Answer ONLY using the provided sources. If the answer is not present, just say you don't know.",
+              text:
+                'You are a RAG assistant. Answer ONLY using the sources provided. ' +
+                "If the answer is not present in the sources, say you don't know.",
             },
           ],
         },
@@ -52,7 +59,11 @@ export const query = async (question: string) => {
     });
 
     const citations = results.metadatas[0]
-      ?.map((metadata) => ({ sourceId: metadata?.source_id as string }))
+      ?.map((metadata, index) => ({
+        sourceId: metadata?.source_id as string,
+        snippet: results.documents?.[0]?.[index]?.slice(0, 300) || '',
+        citationIndex: index + 1,
+      }))
       .filter((citation) => citation.sourceId);
 
     await prisma.message.update({

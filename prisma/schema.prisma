@@ -26,10 +26,12 @@ model Message {
 }
 
 model Citation {
-  id        String   @id @default(cuid())
-  sourceId  String
-  source    Source   @relation(fields: [sourceId], references: [id])
-  messageId String
-  message   Message  @relation(fields: [messageId], references: [id])
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  sourceId      String
+  source        Source   @relation(fields: [sourceId], references: [id])
+  messageId     String
+  message       Message  @relation(fields: [messageId], references: [id])
+  snippet       String
+  citationIndex Int
+  createdAt     DateTime @default(now())
 }
