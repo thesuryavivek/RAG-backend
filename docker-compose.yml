@@ -5,8 +5,10 @@ services:
       - '3001:3000'
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=file:/app/dev.db
     volumes:
-      - sqlite_data:/app/data
+      - ./dev.db:/app/dev.db
     depends_on:
       - chromadb
     restart: unless-stopped
@@ -22,5 +24,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  sqlite_data:
   chromadb_data:

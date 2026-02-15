@@ -23,5 +23,8 @@ RUN mkdir -p /app/data
 # Expose the port
 EXPOSE 3000
 
+RUN pnpx prisma migrate deploy
+RUN pnpx prisma generate
+
 # Start the application
 CMD ["node", "dist/index.js"]

@@ -1,8 +1,34 @@
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import { encoding_for_model } from "tiktoken";
-import type { DataSource } from "./index.js";
-import { openai } from "./services/openaiClient.js";
+import type { ingestDatatype } from "../schemas/ingestSchema.js";
+
+export const chunkByTokens = (
+  text: string,
+  { chunkSize = 500, overlap = 80 } = {},
+) => {
+  const textDecoder = new TextDecoder();
+  const enc = encoding_for_model("gpt-5-nano");
+
+  const tokens = enc.encode(text);
+  const chunks = [];
+
+  let start = 0;
+
+  while (start < tokens.length) {
+    const end = Math.min(start + chunkSize, tokens.length);
+
+    const chunkTokens = tokens.slice(start, end);
+    const chunkText = textDecoder.decode(enc.decode(chunkTokens));
+
+    chunks.push(chunkText);
+
+    start += chunkSize - overlap;
+  }
+
+  enc.free();
+  return chunks;
+};
 
 const cleanPlainText = (text: string) => {
   return text
@@ -27,34 +53,7 @@ const extractTextFromHTML = (html: string, url: string) => {
   return article.textContent;
 };
 
-export const chunkByTokens = (
-  text: string,
-  { chunkSize = 500, overlap = 80 } = {},
-) => {
-  const textDecoder = new TextDecoder();
-  const enc = encoding_for_model("gpt-5");
-
-  const tokens = enc.encode(text);
-  const chunks = [];
-
-  let start = 0;
-
-  while (start < tokens.length) {
-    const end = Math.min(start + chunkSize, tokens.length);
-
-    const chunkTokens = tokens.slice(start, end);
-    const chunkText = textDecoder.decode(enc.decode(chunkTokens));
-
-    chunks.push(chunkText);
-
-    start += chunkSize - overlap;
-  }
-
-  enc.free();
-  return chunks;
-};
-
-export const cleanData = async (data: DataSource) => {
+export const cleanData = async (data: ingestDatatype) => {
   if (data.type === "note") {
     return cleanPlainText(data.text);
   }
@@ -70,14 +69,4 @@ export const cleanData = async (data: DataSource) => {
 
     return cleanPlainText(text);
   }
-};
-
-export const embed = async (data: string[]) => {
-  const res = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: data,
-  });
-
-  const embeddings = res.data.map((i) => i.embedding);
-  return embeddings;
 };
