@@ -1,23 +1,24 @@
-import { v4 as uuid } from "uuid";
-import { chromaClient } from "../db/chroma.js";
-import { prisma } from "../db/prisma.js";
-import type { ingestDatatype } from "../schemas/ingestSchema.js";
-import { chunkByTokens, cleanData } from "./chunkerService.js";
-import { embed } from "./embeddingService.js";
+import { v4 as uuid } from 'uuid';
+import { chromaClient } from '../db/chroma.js';
+import { prisma } from '../db/prisma.js';
+import type { ingestDatatype } from '../schemas/ingestSchema.js';
+import { chunkByTokens, cleanData } from './chunkerService.js';
+import { embed } from './embeddingService.js';
 
 export const ingestSource = async (data: ingestDatatype) => {
   try {
     const cleanedData = await cleanData(data);
 
     if (!cleanedData) {
-      throw new Error("no clean data");
+      throw new Error('no clean data');
     }
 
     const chunks = chunkByTokens(cleanedData);
     const embeddings = await embed(chunks);
 
     const collection = await chromaClient.getOrCreateCollection({
-      name: "rag_collection",
+      name: 'rag_collection',
+      embeddingFunction: null,
     });
 
     await collection.add({
@@ -34,7 +35,7 @@ export const ingestSource = async (data: ingestDatatype) => {
       data: {
         type: data.type,
         rawText: cleanedData,
-        sourceUrl: data.type === "url" ? data.url : null,
+        sourceUrl: data.type === 'url' ? data.url : null,
         title: data.title,
       },
     });
@@ -47,7 +48,7 @@ export const ingestSource = async (data: ingestDatatype) => {
     } else {
       return {
         success: false,
-        error: "Something went wrong, please try again",
+        error: 'Something went wrong, please try again',
       };
     }
   }
