@@ -1,2 +1,11 @@
+ignoredBuiltDependencies:
+  - '@prisma/engines'
+  - better-sqlite3
+  - onnxruntime-node
+  - prisma
+  - protobufjs
+  - sharp
+
 onlyBuiltDependencies:
   - esbuild
+  - better-sqlite3

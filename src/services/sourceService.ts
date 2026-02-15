@@ -13,6 +13,7 @@ export const sourceService = async () => {
       sources,
     };
   } catch (err) {
+    console.log(err);
     if (err instanceof Error) {
       return { success: false, error: err.message };
     } else {

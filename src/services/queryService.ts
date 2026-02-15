@@ -57,6 +57,7 @@ export const query = async (question: string) => {
       answer: response.output_text,
     };
   } catch (err) {
+    console.log(err);
     if (err instanceof Error) {
       return { success: false, error: err.message };
     } else {

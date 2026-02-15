@@ -13,6 +13,7 @@ export const messagesService = async () => {
       messages,
     };
   } catch (err) {
+    console.log(err);
     if (err instanceof Error) {
       return { success: false, error: err.message };
     } else {
