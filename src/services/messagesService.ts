@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js';
+import { logger } from './logger.js';
 
 export const messagesService = async () => {
   try {
@@ -29,7 +30,7 @@ export const messagesService = async () => {
       messages,
     };
   } catch (err) {
-    console.log(err);
+    logger.error({ err }, 'Failed to fetch messages');
     if (err instanceof Error) {
       return { success: false, error: err.message };
     } else {

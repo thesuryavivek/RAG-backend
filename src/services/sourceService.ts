@@ -1,10 +1,11 @@
-import { prisma } from "../db/prisma.js";
+import { prisma } from '../db/prisma.js';
+import { logger } from './logger.js';
 
 export const sourceService = async () => {
   try {
     const sources = await prisma.source.findMany({
       orderBy: {
-        createdAt: "asc",
+        createdAt: 'asc',
       },
     });
 
@@ -13,13 +14,13 @@ export const sourceService = async () => {
       sources,
     };
   } catch (err) {
-    console.log(err);
+    logger.error({ err }, 'Failed to fetch sources');
     if (err instanceof Error) {
       return { success: false, error: err.message };
     } else {
       return {
         success: false,
-        error: "Something went wrong, please try again",
+        error: 'Something went wrong, please try again',
       };
     }
   }

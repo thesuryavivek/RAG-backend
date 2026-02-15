@@ -1,6 +1,7 @@
 import { chromaClient } from '../db/chroma.js';
 import { prisma } from '../db/prisma.js';
 import { embed } from './embeddingService.js';
+import { logger } from './logger.js';
 import { openai } from './openaiClient.js';
 
 export const query = async (question: string) => {
@@ -80,12 +81,17 @@ export const query = async (question: string) => {
       },
     });
 
+    logger.info(
+      { messageId: createdMessage.id, sources: results.documents[0]?.length },
+      'Query completed',
+    );
+
     return {
       success: true,
       answer: response.output_text,
     };
   } catch (err) {
-    console.log(err);
+    logger.error({ err, question }, 'Query failed');
     if (err instanceof Error) {
       return { success: false, error: err.message };
     } else {

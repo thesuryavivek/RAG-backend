@@ -4,6 +4,7 @@ import { prisma } from '../db/prisma.js';
 import type { ingestDatatype } from '../schemas/ingestSchema.js';
 import { chunkByTokens, cleanData } from './chunkerService.js';
 import { embed } from './embeddingService.js';
+import { logger } from './logger.js';
 
 export const ingestSource = async (data: ingestDatatype) => {
   try {
@@ -44,9 +45,14 @@ export const ingestSource = async (data: ingestDatatype) => {
       })),
     });
 
+    logger.info(
+      { sourceId: source.id, type: data.type, chunks: chunks.length },
+      'Source ingested',
+    );
+
     return { success: true };
   } catch (err) {
-    console.log(err);
+    logger.error({ err, type: data.type }, 'Ingestion failed');
     if (err instanceof Error) {
       return { success: false, error: err.message };
     } else {

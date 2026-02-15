@@ -2,6 +2,7 @@ import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
 import { encoding_for_model } from 'tiktoken';
 import type { ingestDatatype } from '../schemas/ingestSchema.js';
+import { logger } from './logger.js';
 
 export const chunkByTokens = (
   text: string,
@@ -46,7 +47,7 @@ const extractTextFromHTML = (html: string, url: string) => {
   const article = reader.parse();
 
   if (!article?.textContent) {
-    console.log('No text content found');
+    logger.warn({ url }, 'No text content found from Readability');
     return null;
   }
 
@@ -55,7 +56,7 @@ const extractTextFromHTML = (html: string, url: string) => {
 
 const fetchWithJinaReader = async (url: string): Promise<string | null> => {
   try {
-    console.log(`Falling back to Jina Reader for: ${url}`);
+    logger.info({ url }, 'Falling back to Jina Reader');
     const res = await fetch(`https://r.jina.ai/${url}`, {
       headers: {
         Accept: 'text/plain',
@@ -63,16 +64,17 @@ const fetchWithJinaReader = async (url: string): Promise<string | null> => {
     });
 
     if (!res.ok) {
-      console.log(`Jina Reader returned ${res.status}`);
+      logger.warn(
+        { url, status: res.status },
+        'Jina Reader returned non-OK status',
+      );
       return null;
     }
 
     const text = await res.text();
-
-    console.log('jina text', text);
     return text || null;
   } catch (err) {
-    console.error('Jina Reader fetch failed:', err);
+    logger.error({ err, url }, 'Jina Reader fetch failed');
     return null;
   }
 };
@@ -85,8 +87,6 @@ export const cleanData = async (data: ingestDatatype) => {
   if (data.type === 'url') {
     const res = await fetch(data.url);
     const html = await res.text();
-
-    console.log('html found', html);
 
     let text = res.ok ? extractTextFromHTML(html, data.url) : null;
 
