@@ -1,14 +1,14 @@
-import { Readability } from "@mozilla/readability";
-import { JSDOM } from "jsdom";
-import { encoding_for_model } from "tiktoken";
-import type { ingestDatatype } from "../schemas/ingestSchema.js";
+import { Readability } from '@mozilla/readability';
+import { JSDOM } from 'jsdom';
+import { encoding_for_model } from 'tiktoken';
+import type { ingestDatatype } from '../schemas/ingestSchema.js';
 
 export const chunkByTokens = (
   text: string,
   { chunkSize = 500, overlap = 80 } = {},
 ) => {
   const textDecoder = new TextDecoder();
-  const enc = encoding_for_model("gpt-5-nano");
+  const enc = encoding_for_model('gpt-5-nano');
 
   const tokens = enc.encode(text);
   const chunks = [];
@@ -32,11 +32,11 @@ export const chunkByTokens = (
 
 const cleanPlainText = (text: string) => {
   return text
-    .replace(/\u00A0/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\u00A0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
-    .normalize("NFKC");
+    .normalize('NFKC');
 };
 
 const extractTextFromHTML = (html: string, url: string) => {
@@ -46,25 +46,56 @@ const extractTextFromHTML = (html: string, url: string) => {
   const article = reader.parse();
 
   if (!article?.textContent) {
-    console.log("No text content found");
+    console.log('No text content found');
     return null;
   }
 
   return article.textContent;
 };
 
+const fetchWithJinaReader = async (url: string): Promise<string | null> => {
+  try {
+    console.log(`Falling back to Jina Reader for: ${url}`);
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      headers: {
+        Accept: 'text/plain',
+      },
+    });
+
+    if (!res.ok) {
+      console.log(`Jina Reader returned ${res.status}`);
+      return null;
+    }
+
+    const text = await res.text();
+
+    console.log('jina text', text);
+    return text || null;
+  } catch (err) {
+    console.error('Jina Reader fetch failed:', err);
+    return null;
+  }
+};
+
 export const cleanData = async (data: ingestDatatype) => {
-  if (data.type === "note") {
+  if (data.type === 'note') {
     return cleanPlainText(data.text);
   }
 
-  if (data.type === "url") {
+  if (data.type === 'url') {
     const res = await fetch(data.url);
     const html = await res.text();
-    const text = extractTextFromHTML(html, data.url);
+
+    console.log('html found', html);
+
+    let text = res.ok ? extractTextFromHTML(html, data.url) : null;
 
     if (!text) {
-      return "No content found";
+      text = await fetchWithJinaReader(data.url);
+    }
+
+    if (!text) {
+      return 'No content found';
     }
 
     return cleanPlainText(text);
