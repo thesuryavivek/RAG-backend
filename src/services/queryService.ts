@@ -1,4 +1,5 @@
-import { chromaClient } from "./chromaClient.js";
+import { chromaClient } from "../db/chroma.js";
+import { prisma } from "../db/prisma.js";
 import { embed } from "./embeddingService.js";
 import { openai } from "./openaiClient.js";
 
@@ -42,6 +43,13 @@ export const query = async (question: string) => {
           ],
         },
       ],
+    });
+
+    await prisma.message.create({
+      data: {
+        question,
+        answer: response.output_text,
+      },
     });
 
     return {

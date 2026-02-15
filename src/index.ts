@@ -1,7 +1,9 @@
 import dotenv from "dotenv";
-import express, { type Request, type Response } from "express";
+import express from "express";
 import { ingestController } from "./controllers/ingestController.js";
+import { messagesController } from "./controllers/messagesController.js";
 import { queryController } from "./controllers/queryController.js";
+import { sourceController } from "./controllers/sourceController.js";
 import { validate } from "./middleware/validate.js";
 import { ingestSchema } from "./schemas/ingestSchema.js";
 import { querySchema } from "./schemas/querySchema.js";
@@ -13,11 +15,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-app.get("/items", (req: Request, res: Response) => {
-  res.json({
-    dataSources: [],
-  });
-});
+app.get("/items", sourceController);
+app.get("/messages", messagesController);
 
 app.post("/ingest", validate(ingestSchema), ingestController);
 app.post("/query", validate(querySchema), queryController);
