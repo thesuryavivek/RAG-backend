@@ -8,18 +8,28 @@ datasource db {
 }
 
 model Source {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   type      String
   title     String?
   rawText   String
   sourceUrl String?
-  status    String   @default("enqueued")
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
+  citations Citation[]
 }
 
 model Message {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   question  String
   answer    String?
+  citations Citation[]
+  createdAt DateTime   @default(now())
+}
+
+model Citation {
+  id        String   @id @default(cuid())
+  sourceId  String
+  source    Source   @relation(fields: [sourceId], references: [id])
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id])
   createdAt DateTime @default(now())
 }

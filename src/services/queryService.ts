@@ -1,43 +1,49 @@
-import { chromaClient } from "../db/chroma.js";
-import { prisma } from "../db/prisma.js";
-import { embed } from "./embeddingService.js";
-import { openai } from "./openaiClient.js";
+import { chromaClient } from '../db/chroma.js';
+import { prisma } from '../db/prisma.js';
+import { embed } from './embeddingService.js';
+import { openai } from './openaiClient.js';
 
 export const query = async (question: string) => {
   try {
+    const createdMessage = await prisma.message.create({
+      data: {
+        question,
+      },
+    });
+
     const questionEmbedding = await embed(question);
 
     const collection = await chromaClient.getCollection({
-      name: "rag_collection",
+      name: 'rag_collection',
     });
 
     const results = await collection.query({
       queryEmbeddings: questionEmbedding,
       nResults: 5,
-      include: ["documents", "metadatas"],
+      include: ['documents', 'metadatas'],
     });
 
     const context = results.documents
       .map((doc, index) => `SOURCE ${index + 1} \n ${doc} \n`)
-      .join("\n");
+      .join('\n');
 
     const response = await openai.responses.create({
-      model: "gpt-5-nano",
+      model: 'gpt-5-nano',
       input: [
         {
-          role: "developer",
+          role: 'developer',
           content: [
             {
-              type: "input_text",
+              type: 'input_text',
               text: "You are a RAG assistant. Answer ONLY using the provided sources. If the answer is not present, just say you don't know.",
             },
           ],
         },
         {
-          role: "user",
+          role: 'user',
           content: [
             {
-              type: "input_text",
+              type: 'input_text',
               text: `Question: ${question} \n\n Sources: \n ${context}`,
             },
           ],
@@ -45,10 +51,21 @@ export const query = async (question: string) => {
       ],
     });
 
-    await prisma.message.create({
+    const citations = results.metadatas[0]
+      ?.map((metadata) => ({ sourceId: metadata?.source_id as string }))
+      .filter((citation) => citation.sourceId);
+
+    await prisma.message.update({
       data: {
-        question,
         answer: response.output_text,
+        citations: {
+          createMany: {
+            data: citations || [],
+          },
+        },
+      },
+      where: {
+        id: createdMessage.id,
       },
     });
 
@@ -63,7 +80,7 @@ export const query = async (question: string) => {
     } else {
       return {
         success: false,
-        error: "Something went wrong, please try again",
+        error: 'Something went wrong, please try again',
       };
     }
   }

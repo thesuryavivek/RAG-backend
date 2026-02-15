@@ -1,10 +1,25 @@
-import { prisma } from "../db/prisma.js";
+import { prisma } from '../db/prisma.js';
 
 export const messagesService = async () => {
   try {
     const messages = await prisma.message.findMany({
       orderBy: {
-        createdAt: "asc",
+        createdAt: 'asc',
+      },
+      include: {
+        citations: {
+          distinct: ['sourceId'],
+          orderBy: {
+            createdAt: 'asc',
+          },
+          select: {
+            source: {
+              select: {
+                title: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -19,7 +34,7 @@ export const messagesService = async () => {
     } else {
       return {
         success: false,
-        error: "Something went wrong, please try again",
+        error: 'Something went wrong, please try again',
       };
     }
   }

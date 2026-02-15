@@ -13,6 +13,15 @@ export const ingestSource = async (data: ingestDatatype) => {
       throw new Error('no clean data');
     }
 
+    const source = await prisma.source.create({
+      data: {
+        type: data.type,
+        rawText: cleanedData,
+        sourceUrl: data.type === 'url' ? data.url : null,
+        title: data.title,
+      },
+    });
+
     const chunks = chunkByTokens(cleanedData);
     const embeddings = await embed(chunks);
 
@@ -27,17 +36,11 @@ export const ingestSource = async (data: ingestDatatype) => {
       embeddings,
       metadatas: chunks.map(() => ({
         timestamp: new Date().toISOString(),
-        source_type: data.type,
+        source_type: source.type,
+        source_id: source.id,
+        url: source.type === 'url' ? source.sourceUrl : null,
+        title: source.title,
       })),
-    });
-
-    await prisma.source.create({
-      data: {
-        type: data.type,
-        rawText: cleanedData,
-        sourceUrl: data.type === 'url' ? data.url : null,
-        title: data.title,
-      },
     });
 
     return { success: true };
