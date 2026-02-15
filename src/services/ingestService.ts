@@ -35,6 +35,7 @@ export const ingestSource = async (data: ingestDatatype) => {
         type: data.type,
         rawText: cleanedData,
         sourceUrl: data.type === "url" ? data.url : null,
+        title: data.title,
       },
     });
 
