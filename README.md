@@ -2,6 +2,8 @@
 
 A RAG (Retrieval-Augmented Generation) backend that ingests URLs and notes, chunks and embeds them, and answers questions using relevant retrieved context.
 
+**Live Demo:** [turium-rag-frontend.vercel.app](https://turium-rag-frontend.vercel.app/)
+
 ## Architecture
 
 ```
