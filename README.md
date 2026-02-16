@@ -1,4 +1,4 @@
-# Turium Backend
+# Backend
 
 A RAG (Retrieval-Augmented Generation) backend that ingests URLs and notes, chunks and embeds them, and answers questions using relevant retrieved context.
 
@@ -183,22 +183,22 @@ Then set `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser` in your `.env`.
 
 **Why:** ChromaDB is simple to self-host, has a straightforward API, and runs as a single Docker container with no external dependencies. For a project that stores embeddings from personal notes and bookmarked URLs, it's the right level of infrastructure.
 
-**Tradeoff:** ChromaDB stores everything in-memory by default and isn't built for distributed workloads. At scale, Pinecone, Weaviate, or pgvector (if already running Postgres) would be better choices. ChromaDB also lacks built-in filtering by similarity threshold — we always get back exactly `nResults` regardless of relevance.
+**Tradeoff:** ChromaDB stores everything in-memory by default and isn't built for distributed workloads. At scale, Pinecone, Weaviate, or pgvector (if already running Postgres) would be better choices. ChromaDB also lacks built-in filtering by similarity threshold - we always get back exactly `nResults` regardless of relevance.
 
 ### 3. What Breaks at Scale
 
-- **SQLite** — single-writer lock means concurrent ingestion requests will queue. Fine for personal use, blocks under multi-user load.
-- **ChromaDB** — no horizontal scaling. Memory-bound. Large collections (100k+ chunks) will slow down queries.
-- **Puppeteer** — each stealth browser fetch launches a full Chromium process (~200MB RAM). Under concurrent ingestion, this will exhaust server memory quickly. Needs a browser pool or queue.
-- **No ingestion queue** — URLs are fetched and processed synchronously in the request handler. A slow website blocks the HTTP response. Should be moved to a background job (BullMQ, etc).
-- **Embedding cost** — every ingestion and query calls OpenAI. At volume, costs add up and rate limits become a concern.
+- **SQLite** - single-writer lock means concurrent ingestion requests will queue. Fine for personal use, blocks under multi-user load.
+- **ChromaDB** - no horizontal scaling. Memory-bound. Large collections (100k+ chunks) will slow down queries.
+- **Puppeteer** - each stealth browser fetch launches a full Chromium process (~200MB RAM). Under concurrent ingestion, this will exhaust server memory quickly. Needs a browser pool or queue.
+- **No ingestion queue** - URLs are fetched and processed synchronously in the request handler. A slow website blocks the HTTP response. Should be moved to a background job (BullMQ, etc).
+- **Embedding cost** - every ingestion and query calls OpenAI. At volume, costs add up and rate limits become a concern.
 
 ### 4. Production Changes
 
-- **Swap SQLite → Postgres** — handles concurrent writes, proper connection pooling, battle-tested at scale.
-- **Add a job queue** — BullMQ or similar for async ingestion. Return a job ID immediately, process in the background.
-- **Browser pool** — reuse Chromium instances across fetches instead of launching/closing per request. Libraries like `generic-pool` work well.
-- **Similarity threshold** — filter out low-relevance chunks before sending to the LLM. ChromaDB returns distances; reject chunks below a threshold to improve answer quality.
-- **Caching** — cache embeddings for repeated queries, cache fetched URL content with a TTL.
-- **Rate limiting** — protect the ingestion and query endpoints from abuse.
-- **Auth** — currently wide open. Add API keys or JWT for multi-user deployments.
+- **Swap SQLite → Postgres** - handles concurrent writes, proper connection pooling, battle-tested at scale.
+- **Add a job queue** - BullMQ or similar for async ingestion. Return a job ID immediately, process in the background.
+- **Browser pool** - reuse Chromium instances across fetches instead of launching/closing per request. Libraries like `generic-pool` work well.
+- **Similarity threshold** - filter out low-relevance chunks before sending to the LLM. ChromaDB returns distances; reject chunks below a threshold to improve answer quality.
+- **Caching** - cache embeddings for repeated queries, cache fetched URL content with a TTL.
+- **Rate limiting** - protect the ingestion and query endpoints from abuse.
+- **Auth** - currently wide open. Add API keys or JWT for multi-user deployments.
