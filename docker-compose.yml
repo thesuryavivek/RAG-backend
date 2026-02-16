@@ -1,8 +1,21 @@
 services:
+  caddy:
+    image: caddy:latest
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   backend:
     build: .
-    ports:
-      - '3001:3000'
+    expose:
+      - '3000'
     env_file:
       - .env
     environment:
@@ -15,8 +28,8 @@ services:
 
   chromadb:
     image: chromadb/chroma:latest
-    ports:
-      - '8000:8000'
+    expose:
+      - '8000'
     volumes:
       - chromadb_data:/chroma/chroma
     env_file:
@@ -24,5 +37,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  caddy_data:
+  caddy_config:
   backend_data:
   chromadb_data:
