@@ -1,8 +1,13 @@
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { encoding_for_model } from 'tiktoken';
 import type { ingestDatatype } from '../schemas/ingestSchema.js';
 import { logger } from './logger.js';
+
+// @ts-expect-error puppeteer-extra types don't align with ESM
+puppeteer.use(StealthPlugin());
 
 export const chunkByTokens = (
   text: string,
@@ -54,6 +59,29 @@ const extractTextFromHTML = (html: string, url: string) => {
   return article.textContent;
 };
 
+const fetchWithBrowser = async (url: string): Promise<string | null> => {
+  let browser;
+  try {
+    logger.info({ url }, 'Falling back to stealth browser');
+    // @ts-expect-error puppeteer-extra types don't align with ESM
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+    const page = await browser.newPage();
+
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 });
+
+    const html = await page.content();
+    return html;
+  } catch (err) {
+    logger.error({ err, url }, 'Stealth browser fetch failed');
+    return null;
+  } finally {
+    await browser?.close();
+  }
+};
+
 const fetchWithJinaReader = async (url: string): Promise<string | null> => {
   try {
     logger.info({ url }, 'Falling back to Jina Reader');
@@ -87,8 +115,14 @@ export const cleanData = async (data: ingestDatatype) => {
   if (data.type === 'url') {
     const res = await fetch(data.url);
     const html = await res.text();
-
     let text = res.ok ? extractTextFromHTML(html, data.url) : null;
+
+    if (!text) {
+      const browserHtml = await fetchWithBrowser(data.url);
+      if (browserHtml) {
+        text = extractTextFromHTML(browserHtml, data.url);
+      }
+    }
 
     if (!text) {
       text = await fetchWithJinaReader(data.url);

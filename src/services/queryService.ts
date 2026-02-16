@@ -43,7 +43,8 @@ export const query = async (question: string) => {
               type: 'input_text',
               text:
                 'You are a RAG assistant. Answer ONLY using the sources provided. ' +
-                "If the answer is not present in the sources, say you don't know.",
+                'Cite your sources inline using [1], [2], etc. matching the source numbers. ' +
+                "If the answer is not present in the sources, say you don't know without citing any sources.",
             },
           ],
         },
@@ -59,13 +60,22 @@ export const query = async (question: string) => {
       ],
     });
 
+    const citedIndices = new Set(
+      [...(response.output_text?.matchAll(/\[(\d+)\]/g) || [])].map((m) =>
+        parseInt(m[1]!),
+      ),
+    );
+
     const citations = results.metadatas[0]
       ?.map((metadata, index) => ({
         sourceId: metadata?.source_id as string,
         snippet: results.documents?.[0]?.[index]?.slice(0, 300) || '',
         citationIndex: index + 1,
       }))
-      .filter((citation) => citation.sourceId);
+      .filter(
+        (citation) =>
+          citation.sourceId && citedIndices.has(citation.citationIndex),
+      );
 
     await prisma.message.update({
       data: {
