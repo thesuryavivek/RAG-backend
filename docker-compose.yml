@@ -6,9 +6,9 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=file:/app/dev.db
+      - DATABASE_URL=file:/app/data/turium.db
     volumes:
-      - ./dev.db:/app/dev.db
+      - backend_data:/app/data
     depends_on:
       - chromadb
     restart: unless-stopped
@@ -24,4 +24,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  backend_data:
   chromadb_data:
